@@ -1,6 +1,6 @@
 {
   "name": "twitter-rss",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Represent a Twitter user timeline as an RSS feed",
   "bin": "./cli.js",
   "repository": {
