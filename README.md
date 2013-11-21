@@ -1,5 +1,7 @@
 # twitter-rss
 
+Represent a Twitter user timeline as an RSS feed.
+
 ## Installing
 
     npm install -g twitter-rss
