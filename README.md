@@ -28,4 +28,4 @@ Copy, edit and save this example configuration file:
 
 ## Using
 
-The URL for RSS feed of user `@example`, when configuration option `baseURL` is set to `"http://localhost:1337"`, is at `http://localhost:1337/example`.
+The URL for RSS feed of user `@example`, when configuration option `baseURL` is set to `"http://localhost:1337"`, is `http://localhost:1337/example`.
