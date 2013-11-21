@@ -52,7 +52,7 @@ http.createServer(function (req, res) {
             feed.item({
                 title: tweet.text,
                 description: tweet.text,
-                url: 'https://twitter.com/' + screenName + '/status/id_str',
+                url: 'https://twitter.com/' + screenName + '/status/' + tweet.id_str,
                 date: tweet.created_at
             });
         });
