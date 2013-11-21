@@ -1,4 +1,5 @@
 var fs = require('fs');
+var url = require('url');
 var http = require('http');
 var twitter = require('twitter');
 var RSS = require('rss');
@@ -15,8 +16,13 @@ var twit = new twitter({
     access_token_secret: cfg.twitter.access_token_secret
 });
 
+var basePath = url.parse(cfg.baseURL).path;
+if(basePath === '/') {
+    basePath = '';
+}
+
 http.createServer(function (req, res) {
-    var screenName = req.url.substr(1);
+    var screenName = req.url.substr(basePath.length + 1);
     twit.get('/statuses/user_timeline.json', {
         screen_name: screenName,
         count: cfg.count
