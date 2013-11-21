@@ -6,7 +6,7 @@ var RSS = require('rss');
 
 var cfgFilename = fs.realpathSync(process.argv[2]);
 
-console.log('Reading configuration file ' + cfgFilename);
+console.log('Reading configuration file ' + cfgFilename + '.');
 var cfg = JSON.parse(fs.readFileSync(cfgFilename));
 
 var twit = new twitter({
@@ -63,4 +63,4 @@ http.createServer(function (req, res) {
     });
 }).listen(cfg.bindPort, cfg.bindIp);
 
-console.log('Server running at http://' + cfg.bindIp + ':' + cfg.bindPort + '/');
+console.log('HTTP server running on port ' + cfg.bindPort + ' bound to ip ' + cfg.bindIp + ' with base URL set to ' + cfg.baseURL + '.');
