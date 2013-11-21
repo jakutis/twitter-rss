@@ -2,10 +2,7 @@
   "name": "twitter-rss",
   "version": "0.0.0",
   "description": "Represent a Twitter user timeline as an RSS feed",
-  "main": "index.js",
-  "scripts": {
-    "test": "mocha"
-  },
+  "bin": "./cli.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/jakutis/twitter-rss"
@@ -19,5 +16,9 @@
   "bugs": {
     "url": "https://github.com/jakutis/twitter-rss/issues"
   },
-  "homepage": "https://github.com/jakutis/twitter-rss"
+  "homepage": "https://github.com/jakutis/twitter-rss",
+  "dependencies": {
+    "twitter": "0.2.x",
+    "rss": "0.2.x"
+  }
 }
