@@ -2,13 +2,23 @@
 
 Represent a Twitter user timeline as an RSS feed.
 
-## Installing
+- [Overview](#overview)
+- [Installation](#installation)
+- [CLI](#cli)
+- [Development](#development)
 
-    npm install -g twitter-rss
+## Overview
 
-## Configuring
+    TODO
 
-Copy, edit and save this example configuration file:
+## Installation
+
+  Install with [npm](https://www.npmjs.org/package/twitter-rss):
+
+    $ npm install --global twitter-rss
+
+
+  Then copy, edit and save this example configuration file:
 
     {
       "count": 10,
@@ -24,10 +34,15 @@ Copy, edit and save this example configuration file:
       }
     }
 
-## Running
+## CLI
 
-    twitter-rss /path/to/config/file
+  Run:
 
-## Using
+    $ twitter-rss /path/to/config/file
 
-The URL for RSS feed of user `@example`, when configuration option `baseURL` is set to `"http://localhost:1337"`, is `http://localhost:1337/example`.
+  The URL for RSS feed of user `@example`, when configuration option `baseURL` is set to `"http://localhost:1337"`, is `http://localhost:1337/example`.
+
+## Development
+
+    TODO
+
