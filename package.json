@@ -2,7 +2,7 @@
   "name": "twitter-rss",
   "version": "0.0.3",
   "description": "Represent a Twitter user timeline as an RSS feed.",
-  "bin": "./cli.js",
+  "bin": "cli.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/jakutis/twitter-rss"
