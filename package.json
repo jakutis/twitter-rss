@@ -12,7 +12,7 @@
     "rss"
   ],
   "author": "Vytautas Jakutis <vytautas@jakut.is>",
-  "license": "MIT",
+  "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/jakutis/twitter-rss/issues"
   },
