@@ -11,12 +11,10 @@
     "twitter",
     "rss"
   ],
-  "author": "Vytautas Jakutis <vytautas@jakut.is>",
+  "author": "Vytautas Jakutis <vytautas@jakut.is> (https://jakut.is/)",
   "license": "GPL-3.0",
-  "bugs": {
-    "url": "https://github.com/jakutis/twitter-rss/issues"
-  },
-  "homepage": "https://npmjs.org/package/twitter-rss",
+  "bugs": "https://github.com/jakutis/twitter-rss/issues",
+  "homepage": "https://www.npmjs.org/package/twitter-rss",
   "dependencies": {
     "twitter": "0.2.x",
     "rss": "0.2.x"
