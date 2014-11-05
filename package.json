@@ -16,7 +16,8 @@
   "bugs": "https://github.com/jakutis/twitter-rss/issues",
   "homepage": "https://www.npmjs.org/package/twitter-rss",
   "dependencies": {
-    "twitter": "0.2.x",
-    "rss": "0.2.x"
+    "async": "0.9.x",
+    "rss": "0.2.x",
+    "twitter": "0.2.x"
   }
 }
