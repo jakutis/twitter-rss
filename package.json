@@ -1,6 +1,6 @@
 {
   "name": "twitter-rss",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Represent a Twitter user timeline as an RSS feed.",
   "bin": "cli.js",
   "repository": {
@@ -16,8 +16,11 @@
   "bugs": "https://github.com/jakutis/twitter-rss/issues",
   "homepage": "https://www.npmjs.org/package/twitter-rss",
   "dependencies": {
-    "async": "0.9.x",
-    "rss": "0.2.x",
-    "twitter": "0.2.x"
+    "bignum": "^0.12.5",
+    "bluebird": "^3.5.1",
+    "debug": "^3.1.0",
+    "html-entities": "^1.2.1",
+    "rss": "^1.2.2",
+    "twitter": "^1.7.1"
   }
 }
