@@ -8,6 +8,10 @@ var http = require('http');
 var htmlEntities = require('html-entities');
 var URL = require('url').URL;
 
+var consts = {
+  ADD_USER_QUEUE: '/add-user-queue'
+};
+
 function location(userAgent, url, redirects) {
   debug('twitter-rss')('--- ' + redirects + ' ' + url);
   if (redirects === undefined) {
@@ -101,15 +105,19 @@ function toError(err) {
 
 function addTwitterUser(users, twitterUser) {
   var user = users[twitterUser.id_str];
-  var savedAt = user && user.savedAt || null;
 
   users[twitterUser.id_str] = {
     id: twitterUser.id_str,
-    savedAt,
     fullName: twitterUser.empty ? (user ? user.fullName : '-') : twitterUser.name,
     userName: twitterUser.empty ? (user ? user.userName : '-') : twitterUser.screen_name,
     updatedAt: twitterUser.empty ? (user ? user.updatedAt : Date.now()) : Date.now()
   };
+  if (user && user.tweet) {
+    users[twitterUser.id_str].tweet = user.tweet;
+  }
+  if (user && user.savedAt) {
+    users[twitterUser.id_str].savedAt = user.savedAt;
+  }
 }
 
 var Tweet = {
@@ -243,26 +251,30 @@ function createServer({bindPort, bindIp, twitterRss, baseUrl, basePath, count, u
 
       if(path[0] === 'user' && path[2] === 'tweets') {
         var userName = path[1];
-        var user = await twitterRss.loadUser({userName});
-        if (user && user.tweets) {
-          var begin = user.tweets.length - count;
-          var tweets = user.tweets.slice(begin, begin + count).reverse();
-          var feed = formatFeed({
-            pubDate: Tweet.createdString(tweets[0]),
-            users: await twitterRss.users(),
-            tweets,
-            updateInterval,
-            title: 'tweets by ' + userName,
-            url: baseUrl + '/user/' + userName + '/tweets',
-            siteUrl: 'https://twitter.com/' + userName
-          });
-
-          res.writeHead(200, {
-            'Content-Type': 'application/rss+xml'
-          });
-          res.end(feed);
-          return;
+        var users = await twitterRss.users();
+        var user = await twitterRss.loadUser({users, userName});
+        if (!user) {
+          user = await this.loadTwitterUser({ userName });
+          user.tweets = [];
+          await twitterRss.addUser(user.id_str);
         }
+        var begin = user.tweets.length - count;
+        var tweets = user.tweets.slice(begin, begin + count).reverse();
+        var feed = formatFeed({
+          pubDate: tweets.length > 0 ? Tweet.createdString(tweets[0]) : new Date().toString(),
+          users,
+          tweets,
+          updateInterval,
+          title: 'tweets by ' + userName,
+          url: baseUrl + '/user/' + userName + '/tweets',
+          siteUrl: 'https://twitter.com/' + userName
+        });
+
+        res.writeHead(200, {
+          'Content-Type': 'application/rss+xml'
+        });
+        res.end(feed);
+        return;
       }
 
       if(path[0] === 'tweets') {
@@ -326,11 +338,14 @@ Twitter2000.prototype = {
       include_entities: true
     });
   },
-  loadUser: function ({userId}) {
-    debug('twitter-rss')('getting user ' + userId);
+  loadUser: function ({userId, userName}) {
+    if (userId && userName) {
+      throw new Error('both userId and userName were given');
+    }
+    debug('twitter-rss')('getting user ' + (userId || userName));
     return this._get('users/show', {
       user_id: userId,
-      screen_name: undefined,
+      screen_name: userName,
       include_entities: true
     });
   },
@@ -405,35 +420,14 @@ TwitterRSS.prototype = {
   mostRecentTweets: async function () {
     return await this._database.mostRecentTweets();
   },
-  loadUser: async function ({userName, userId}) {
-    if (!userId) {
-      var userNameMap = await this._database.loadUserNameMap();
-      if (userName in userNameMap) {
-        userId = userNameMap[userName];
-      } else {
-        return null;
-      }
-    }
-    return await this._database.loadUser({ userId });
-  },
-  _loadUser: async function ({userId}) {
-    return await this._twitter.loadUser({userId});
+  loadTwitterUser: async function ({userId, userName}) {
+    return await this._twitter.loadUser({userId, userName});
   },
   _loadFriendIds: async function () {
     return await this._twitter.loadUserFriendIds({userId: this._myUserId});
   },
   _loadUserTweetsAfter: async function ({userId, tweetId}) {
     return await this._twitter.loadUserTweetsAfter({userId, tweetId});
-  },
-  _allUserIds: async function () {
-    var userIdsAtTwitter = await this._loadFriendIds();
-    var userIdsInDatabase = await this._database.userIds();
-    return [this._myUserId]
-      .concat(userIdsAtTwitter)
-      .concat(userIdsInDatabase)
-      .filter(function (userId, i, userIds) {
-        return userIds.indexOf(userId) === i;
-      });
   },
   _updateReferencedUsers: async function (users, tweets) {
     var _this = this;
@@ -467,7 +461,7 @@ TwitterRSS.prototype = {
     });
 
     await Promise.all(Object.keys(userIds).map(function (userId) {
-      return _this._twitter.loadUser({userId}).then(add, function () {
+      return _this.loadTwitterUser({userId}).then(add, function () {
         add({
           id_str: userId,
           empty: true
@@ -475,8 +469,8 @@ TwitterRSS.prototype = {
       });
     }));
   },
-  users: async function () {
-    return await this._database.users();
+  users: async function (users) {
+    return await this._database.users(users);
   },
   _resolveLinkRedirects: async function (userAgent, tweet) {
     for (var i = 0; i < tweet.entities.urls.length; i++) {
@@ -484,6 +478,11 @@ TwitterRSS.prototype = {
     }
   },
   _resolveLinkedTweets: async function (userAgent, tweet) {
+    if (tweet.retweeted_status) {
+      await this._resolveLinkRedirects(this._userAgent, tweet.retweeted_status);
+      await this._resolveLinkedTweets(this._userAgent, tweet.retweeted_status);
+    }
+
     if (tweet.in_reply_to_status_id_str) {
       try {
         tweet.in_reply_to_status = await this._twitter.loadTweet({tweetId: tweet.in_reply_to_status_id_str});
@@ -494,6 +493,7 @@ TwitterRSS.prototype = {
         await this._resolveLinkRedirects(userAgent, tweet.in_reply_to_status);
       }
     }
+
     for (var i = 0; i < tweet.entities.urls.length; i++) {
       var url = new URL(tweet.entities.urls[i].final_url);
       var parts = url.pathname.split('/');
@@ -511,10 +511,19 @@ TwitterRSS.prototype = {
   },
   update: async function () {
     debug('twitter-rss')('start updating');
-    var _this = this;
     var users = await this._database.users();
 
-    var userIds = (await this._allUserIds())
+    var userIdsAtTwitter = await this._loadFriendIds();
+    var userIdsInDatabase = await this._database.userIds();
+    var queuedUserIds = await this._database.dequeueUserIds();
+
+    var userIds = [this._myUserId]
+      .concat(userIdsAtTwitter)
+      .concat(userIdsInDatabase)
+      .concat(queuedUserIds)
+      .filter(function (userId, i, userIds) {
+        return userIds.indexOf(userId) === i;
+      })
       .sort(function (a, b) {
         if (!(a in users)) {
           return -1;
@@ -525,42 +534,64 @@ TwitterRSS.prototype = {
         return users[a].savedAt - users[b].savedAt;
       });
 
-    async function getUser(userId) {
-      var user = await _this._database.loadUser({ userId });
+    await this._updateUsers({users, userIds});
 
-      if (user === null) {
-        user = await _this._loadUser({userId});
-        user.tweets = [];
-        await _this._database.saveUser(user);
+    debug('twitter-rss')('finish updating');
+  },
+  loadUser: async function ({users, userName}) {
+    var userId;
+    Object.keys(users).some(function (_userId) {
+      var user = users[_userId];
+      if (user.userName === userName) {
+        userId = _userId;
+        return true;
       }
+    });
 
-      return user;
+    if (!userId) {
+      return null;
+    }
+    return await this._database.loadUser({ userId });
+  },
+  addUser: async function (userId) {
+    await this._database.enqueueUserId(userId);
+  },
+  _loadUser: async function ({users, userId}) {
+    var user;
+
+    user = await this._database.loadUser({ userId });
+    if (!user) {
+      user = await this.loadTwitterUser({ userId });
+      addTwitterUser(users, user);
+      user.tweets = [];
+      await this._database.saveUser(user);
     }
 
+    return user;
+  },
+  _updateUsers: async function ({users, userIds}) {
+    var _this = this;
     var userIdsAtTwitter = await this._loadFriendIds();
+
+    var userId;
+    var user;
     for (var i = 0; i < userIds.length; i++) {
       debug('twitter-rss')('updating user ' + (i + 1) + ' of ' + userIds.length);
 
-      var userId = userIds[i];
+      userId = userIds[i];
+      user = undefined;
 
-      var user;
       if (!users[userId]) {
-        user = await getUser(userId);
-        addTwitterUser(users, user);
-        await this._database.users(users);
+        user = await this._loadUser({users, userId});
       }
 
       var loadedTweets = await this._loadUserTweetsAfter({userId, tweetId: users[userId].tweet});
       if (loadedTweets.length > 0) {
-        debug('twitter-rss')('user ' + users[userId].fullName + ' @' + users[userId].userName + ' gets new tweets');
+        debug('twitter-rss')('user ' + users[userId].fullName + ' @' + users[userId].userName + ' has new tweets');
         for (var j = 0; j < loadedTweets.length; j++) {
           debug('twitter-rss')('populating tweet ' + loadedTweets[j].id_str + ' ' + (j + 1) + ' of ' + loadedTweets.length);
           await this._resolveLinkRedirects(this._userAgent, loadedTweets[j]);
           await this._resolveLinkedTweets(this._userAgent, loadedTweets[j]);
-          if (loadedTweets[j].retweeted_status) {
-            await this._resolveLinkRedirects(this._userAgent, loadedTweets[j].retweeted_status);
-            await this._resolveLinkedTweets(this._userAgent, loadedTweets[j].retweeted_status);
-          }
         }
 
         debug('twitter-rss')('updating users');
@@ -569,16 +600,17 @@ TwitterRSS.prototype = {
         users[userId].tweet = Tweet.id(loadedTweets[loadedTweets.length - 1]);
         await this._database.users(users);
 
-        await this._database.updateMostRecentTweets(userIdsAtTwitter, loadedTweets);
-
         if (!user) {
-          user = await getUser(userId);
+          user = await this._loadUser({users, userId});
         }
         user.tweets = user.tweets.concat(loadedTweets);
         await this._database.saveUser(user);
+
+        if (userIdsAtTwitter.indexOf(userId) >= 0) {
+          await this._database.updateMostRecentTweets(loadedTweets);
+        }
       }
     }
-    debug('twitter-rss')('finish updating');
   }
 };
 
@@ -602,6 +634,19 @@ Database.prototype = {
     return fs.writeFileAsync(this._directory + '/' + file, JSON.stringify(content, null, 2));
   },
 
+  dequeueUserIds: async function () {
+    var userIds = await fs.readdirAsync(this._directory + consts.ADD_USER_QUEUE);
+    for (var i = 0; i < userIds.length; i++) {
+      await fs.unlinkAsync(this._directory + consts.ADD_USER_QUEUE + '/' + userIds[i]);
+    }
+    debug('twitter-rss')('dequeued user ids: ' + userIds.join(', '));
+    return userIds;
+  },
+
+  enqueueUserId: async function (userId) {
+    await this._saveFile({file: consts.ADD_USER_QUEUE + '/' + userId, content: null});
+  },
+
   userIds: async function () {
     var users = await this.users();
     return Object.keys(users).filter(function (userId) {
@@ -618,26 +663,18 @@ Database.prototype = {
       return await this._loadFile({file: 'users', initial: {}});
     }
   },
-  loadUserNameMap: async function () {
-    var users = await this.users();
-    var userNameMap = {};
-    Object.keys(users).forEach(function (userId) {
-      userNameMap[users[userId].userName] = userId;
-    });
-    return userNameMap;
-  },
   mostRecentTweets: async function () {
     return await this._loadFile({file: 'mostRecentTweets', initial: []});
   },
   saveUser: async function (user) {
     await this._saveFile({file: user.id_str, content: user});
   },
-  updateMostRecentTweets: async function (userIdsAtTwitter, tweets) {
+  updateMostRecentTweets: async function (tweets) {
     debug('twitter-rss')('updating most recent tweets');
     var _this = this;
     var mostRecentTweets = await _this.mostRecentTweets();
     tweets.forEach(function (tweet) {
-      if (Tweet.isReply(tweet) || userIdsAtTwitter.indexOf(tweet.user.id_str) < 0) {
+      if (Tweet.isReply(tweet)) {
         return;
       }
       var oldestTweet = mostRecentTweets[mostRecentTweets.length - 1];
@@ -662,6 +699,11 @@ Database.prototype = {
 };
 
 var configuration = require(process.argv[2]);
+
+try {
+  fs.mkdirSync(configuration.directory + consts.ADD_USER_QUEUE);
+} catch (e) {
+}
 
 createServer({
   twitterRss: new TwitterRSS({
