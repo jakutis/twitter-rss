@@ -12,6 +12,8 @@ Represent a Twitter user timeline as an RSS feed.
 - provides endpoint `/tweets` returns RSS feed of most recent tweets from your Twitter homepage
 - provides endpoints `/user/{screen name}/tweets` return RSS feed of most recent tweets from the specified user
 
+![screenshot of /tweets endpoint](screenshot.png)
+
 ## Installation
 
   Install with [npm](https://www.npmjs.org/package/twitter-rss):
