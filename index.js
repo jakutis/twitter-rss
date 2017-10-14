@@ -478,12 +478,12 @@ TwitterRSS.prototype = {
   users: async function () {
     return await this._database.users();
   },
-  resolveLinkRedirects: async function (userAgent, tweet) {
+  _resolveLinkRedirects: async function (userAgent, tweet) {
     for (var i = 0; i < tweet.entities.urls.length; i++) {
       tweet.entities.urls[i].final_url = await location(userAgent, tweet.entities.urls[i].expanded_url);
     }
   },
-  resolveLinkedTweets: async function (userAgent, tweet) {
+  _resolveLinkedTweets: async function (userAgent, tweet) {
     if (tweet.in_reply_to_status_id_str) {
       try {
         tweet.in_reply_to_status = await this._twitter.loadTweet({tweetId: tweet.in_reply_to_status_id_str});
@@ -491,7 +491,7 @@ TwitterRSS.prototype = {
         debug('twitter-rss')('failed to resolve in_reply_to_status: ' + tweet.in_reply_to_status_id_str);
       }
       if (tweet.in_reply_to_status) {
-        await this.resolveLinkRedirects(userAgent, tweet.in_reply_to_status);
+        await this._resolveLinkRedirects(userAgent, tweet.in_reply_to_status);
       }
     }
     for (var i = 0; i < tweet.entities.urls.length; i++) {
@@ -504,7 +504,7 @@ TwitterRSS.prototype = {
           debug('twitter-rss')('failed to resolve linked status: ' + url.href);
         }
         if (tweet.entities.urls[i].linked_status) {
-          await this.resolveLinkRedirects(userAgent, tweet.entities.urls[i].linked_status);
+          await this._resolveLinkRedirects(userAgent, tweet.entities.urls[i].linked_status);
         }
       }
     }
@@ -555,11 +555,11 @@ TwitterRSS.prototype = {
         debug('twitter-rss')('user ' + users[userId].fullName + ' @' + users[userId].userName + ' gets new tweets');
         for (var j = 0; j < loadedTweets.length; j++) {
           debug('twitter-rss')('populating tweet ' + loadedTweets[j].id_str + ' ' + (j + 1) + ' of ' + loadedTweets.length);
-          await this.resolveLinkRedirects(this._userAgent, loadedTweets[j]);
-          await this.resolveLinkedTweets(this._userAgent, loadedTweets[j]);
+          await this._resolveLinkRedirects(this._userAgent, loadedTweets[j]);
+          await this._resolveLinkedTweets(this._userAgent, loadedTweets[j]);
           if (loadedTweets[j].retweeted_status) {
-            await this.resolveLinkRedirects(this._userAgent, loadedTweets[j].retweeted_status);
-            await this.resolveLinkedTweets(this._userAgent, loadedTweets[j].retweeted_status);
+            await this._resolveLinkRedirects(this._userAgent, loadedTweets[j].retweeted_status);
+            await this._resolveLinkedTweets(this._userAgent, loadedTweets[j].retweeted_status);
           }
         }
 
