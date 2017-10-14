@@ -82,10 +82,6 @@ function unescape(text) {
   return entities.decode(text);
 }
 
-function clone(object) {
-  return JSON.parse(JSON.stringify(object));
-}
-
 function addTwitterUser(users, twitterUser) {
   var user = users[twitterUser.id_str];
   var savedAt = user && user.savedAt || null;
