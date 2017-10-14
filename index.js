@@ -82,6 +82,23 @@ function unescape(text) {
   return entities.decode(text);
 }
 
+function toError(err) {
+  if (err instanceof Error) {
+    return err;
+  }
+  var error;
+  try {
+    error = new Error(JSON.stringify(err));
+  } catch (e) {
+    error = new Error(String(err));
+  }
+  try {
+    throw error;
+  } catch (e) {
+    return error;
+  }
+}
+
 function addTwitterUser(users, twitterUser) {
   var user = users[twitterUser.id_str];
   var savedAt = user && user.savedAt || null;
@@ -287,23 +304,6 @@ function Twitter2000({consumerKey, consumerSecret, accessTokenKey, accessTokenSe
     access_token_secret: accessTokenSecret
   };
   this._twitter = Promise.promisifyAll(new Twitter(opts));
-}
-
-function toError(err) {
-  if (err instanceof Error) {
-    return err;
-  }
-  var error;
-  try {
-    error = new Error(JSON.stringify(err));
-  } catch (e) {
-    error = new Error(String(err));
-  }
-  try {
-    throw error;
-  } catch (e) {
-    return error;
-  }
 }
 
 Twitter2000.prototype = {
