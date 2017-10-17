@@ -254,7 +254,7 @@ function createServer({bindPort, bindIp, twitterRss, baseUrl, basePath, count, u
         var users = await twitterRss.users();
         var user = await twitterRss.loadUser({users, userName});
         if (!user) {
-          user = await this.loadTwitterUser({ userName });
+          user = await twitterRss.loadTwitterUser({ userName });
           user.tweets = [];
           await twitterRss.addUser(user.id_str);
         }
