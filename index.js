@@ -596,9 +596,7 @@ TwitterRSS.prototype = {
 
         debug('twitter-rss')('updating users');
         await this._updateReferencedUsers(users, loadedTweets);
-        users[userId].savedAt = Date.now();
         users[userId].tweet = Tweet.id(loadedTweets[loadedTweets.length - 1]);
-        await this._database.users(users);
 
         if (!user) {
           user = await this._loadUser({users, userId});
@@ -610,6 +608,9 @@ TwitterRSS.prototype = {
           await this._database.updateMostRecentTweets(loadedTweets);
         }
       }
+
+      users[userId].savedAt = Date.now();
+      await this._database.users(users);
     }
   }
 };
