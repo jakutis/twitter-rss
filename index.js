@@ -218,7 +218,7 @@ function formatFeed({pubDate, tweets, updateInterval, url, title, siteUrl, users
     feed_url: url,
     site_url: siteUrl,
     author: 'Twitter',
-    pubDate: pubDate,
+    pubDate: tweets.length > 0 ? Tweet.createdString(tweets[0]) : new Date().toString(),
     ttl: updateInterval.toString()
   });
   tweets.forEach(function(tweet) {
@@ -261,7 +261,6 @@ function createServer({bindPort, bindIp, twitterRss, baseUrl, basePath, count, u
         var begin = user.tweets.length - count;
         var tweets = user.tweets.slice(begin, begin + count).reverse();
         var feed = formatFeed({
-          pubDate: tweets.length > 0 ? Tweet.createdString(tweets[0]) : new Date().toString(),
           users,
           tweets,
           updateInterval,
@@ -280,9 +279,8 @@ function createServer({bindPort, bindIp, twitterRss, baseUrl, basePath, count, u
       if(path[0] === 'tweets') {
         var tweets = await twitterRss.mostRecentTweets();
         var feed = formatFeed({
-          pubDate: Tweet.createdString(tweets[0]),
           users: await twitterRss.users(),
-          tweets: tweets,
+          tweets,
           updateInterval,
           title: 'tweets by followed users',
           url: baseUrl + '/tweets',
