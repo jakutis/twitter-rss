@@ -1,7 +1,7 @@
 var bignum = require('bignum');
-var Twitter = require('twitter');
 var Promise = require('bluebird');
 var debug = require('debug');
+var request = require('request');
 var RSS = require('rss');
 var fs = Promise.promisifyAll(require('fs'));
 var http = require('http');
@@ -307,25 +307,23 @@ function createServer({bindPort, bindIp, twitterRss, baseUrl, basePath, count, u
 }
 
 function Twitter2000({consumerKey, consumerSecret, accessTokenKey, accessTokenSecret}) {
-  var opts = {
-    consumer_key: consumerKey,
-    consumer_secret: consumerSecret,
-    access_token_key: accessTokenKey,
-    access_token_secret: accessTokenSecret
-  };
-  this._twitter = Promise.promisifyAll(new Twitter(opts));
+  this._request = request.defaults({
+    oauth: {
+      consumer_key: consumerKey,
+      consumer_secret: consumerSecret,
+      token: accessTokenKey,
+      token_secret: accessTokenSecret
+    },
+    headers: {
+      Accept: '*/*',
+      Connection: 'close',
+      'User-Agent': 'twitter-rss'
+    }
+  });
 }
 
 Twitter2000.prototype = {
-  _twitter: null,
-  _get: async function (resource, parameters) {
-    try {
-      return await this._twitter.getAsync(resource, parameters);
-    } catch (err) {
-      debug('twitter-rss')('get ' + resource + '(' + JSON.stringify(parameters) + ') failed');
-      throw toError(err);
-    }
-  },
+  _request: null,
   loadTweet: function ({tweetId}) {
     debug('twitter-rss')('getting tweet ' + tweetId);
     return this._get('statuses/show', {
@@ -334,6 +332,27 @@ Twitter2000.prototype = {
       include_my_retweet: false,
       tweet_mode: 'extended',
       include_entities: true
+    });
+  },
+  _get: function (resource, qs) {
+    var _this = this;
+    var url = 'https://api.twitter.com/1.1/' + resource + '.json';
+    var method = 'get';
+
+    return new Promise(function (resolve, reject) {
+      _this._request({method, url, qs}, function (error, response, data) {
+        if (error) {
+          return reject(error);
+        }
+        if (response.statusCode !== 200) {
+          return reject(new Error('Status code of ' + resource + '(' + JSON.stringify(qs) + ') is ' + response.statusCode + ' and headers are:\n' + JSON.stringify(response.headers, null, 2) + '\n' + data));
+        }
+        try {
+          resolve(JSON.parse(data));
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   },
   loadUser: function ({userId, userName}) {
