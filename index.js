@@ -573,13 +573,12 @@ TwitterRSS.prototype = {
   addUser: async function (userId) {
     await this._database.enqueueUserId(userId);
   },
-  _loadUser: async function ({users, userId}) {
+  _loadUser: async function (userId) {
     var user;
 
     user = await this._database.loadUser({ userId });
     if (!user) {
       user = await this.loadTwitterUser({ userId });
-      addTwitterUser(users, user);
       user.tweets = [];
       await this._database.saveUser(user);
     }
@@ -599,7 +598,8 @@ TwitterRSS.prototype = {
       user = undefined;
 
       if (!users[userId]) {
-        user = await this._loadUser({users, userId});
+        user = await this._loadUser(userId);
+        addTwitterUser(users, user);
       }
 
       var loadedTweets = await this._loadUserTweetsAfter({userId, tweetId: users[userId].tweet});
@@ -616,7 +616,7 @@ TwitterRSS.prototype = {
         users[userId].tweet = Tweet.id(loadedTweets[loadedTweets.length - 1]);
 
         if (!user) {
-          user = await this._loadUser({users, userId});
+          user = await this._loadUser(userId);
         }
         user.tweets = user.tweets.concat(loadedTweets);
         await this._database.saveUser(user);
