@@ -16,7 +16,7 @@
   "bugs": "https://github.com/jakutis/twitter-rss/issues",
   "homepage": "https://www.npmjs.org/package/twitter-rss",
   "dependencies": {
-    "bignum": "^0.12.5",
+    "bignum": "^0.13.1",
     "bluebird": "^3.5.1",
     "debug": "^3.1.0",
     "html-entities": "^1.2.1",
